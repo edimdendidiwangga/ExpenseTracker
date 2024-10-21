@@ -1,27 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Alert } from 'react-native';
 import { Text, TextInput, Button } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { styled } from 'nativewind';
 import { insertExpense, updateExpense, getExpenseById } from '../utils/db';
-import { getExchangeRate } from '../services/exchangeRateApi'; // Import the function to get exchange rates
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS } from '../utils/colors'; // Assuming you have a constants file for colors
+import { getExchangeRate } from '../services/exchangeRateApi';
+import { COLORS } from '../utils/colors';
 
 const Container = styled(View);
 const Title = styled(Text);
 
-const AddEditExpenseScreen = ({ route, navigation }) => {
+type AddEditExpenseScreenProps = {
+  route: {
+    params: {
+      expenseId?: number;
+    };
+  };
+  navigation: {
+    navigate: (screen: string, params?: object) => void;
+  };
+};
+
+const AddEditExpenseScreen: React.FC<AddEditExpenseScreenProps> = ({ route, navigation }) => {
   const { expenseId } = route.params || {};
 
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
   const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
-  const [targetCurrency, setTargetCurrency] = useState('EUR'); // Default EUR
+  const [targetCurrency, setTargetCurrency] = useState('EUR');
   const [items, setItems] = useState([
     { label: 'Food', value: 'Food' },
     { label: 'Transport', value: 'Transport' },
@@ -46,7 +58,7 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
     setConvertedAmount(null);
   };
 
-  const fetchExpense = async (id) => {
+  const fetchExpense = async (id: number) => {
     try {
       const expense = await getExpenseById(id);
       if (expense) {
@@ -67,7 +79,11 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
       return;
     }
 
-    const expenseData = { category, amount: parseFloat(amount), date: date.toISOString().split('T')[0] };
+    const expenseData = {
+      category,
+      amount: parseFloat(amount),
+      date: date.toISOString().split('T')[0],
+    };
 
     try {
       if (expenseId) {
@@ -85,7 +101,7 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setDate(selectedDate);
@@ -98,33 +114,38 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
       return;
     }
 
-    const rate = await getExchangeRate('USD', targetCurrency);
-    if (rate) {
-      const converted = parseFloat(amount) * rate;
-      setConvertedAmount(converted);
-      Alert.alert('Conversion Successful', `Converted Amount: ${targetCurrency} ${converted.toFixed(2)}`);
-    } else {
+    try {
+      const rate = await getExchangeRate('USD', targetCurrency);
+      if (rate) {
+        const converted = parseFloat(amount) * rate;
+        setConvertedAmount(converted);
+        Alert.alert('Conversion Successful', `Converted Amount: ${targetCurrency} ${converted.toFixed(2)}`);
+      } else {
+        Alert.alert('Error', 'Failed to fetch exchange rate.');
+      }
+    } catch (error) {
       Alert.alert('Error', 'Failed to fetch exchange rate.');
     }
   };
 
   return (
-    <Container className="flex-1 justify-center items-center bg-white p-6">
+    <Container className="flex-1 justify-center items-center bg-white">
       <Title className="text-2xl font-bold mb-6" style={{ color: COLORS.PRIMARY }}>
         {expenseId ? 'Edit Expense' : 'Add New Expense'}
       </Title>
 
       <DropDownPicker
-        open={open}
+        open={categoryOpen}
         value={category}
         items={items}
-        setOpen={setOpen}
+        setOpen={setCategoryOpen}
         setValue={setCategory}
         setItems={setItems}
         placeholder="Select a category"
-        style={{ marginBottom: 16, borderColor: COLORS.PRIMARY }}
+        className="mb-4 border"
         containerStyle={{ width: '75%' }}
-        dropDownStyle={{ backgroundColor: COLORS.BACKGROUND }}
+        dropDownContainerStyle={{ backgroundColor: COLORS.BACKGROUND }}
+        onClose={() => setCategoryOpen(false)}
       />
 
       <TextInput
@@ -133,7 +154,7 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
         onChangeText={setAmount}
         keyboardType="numeric"
         mode="outlined"
-        style={{ marginBottom: 16, width: '75%' }}
+        className="mb-4 w-3/4"
         theme={{ colors: { primary: COLORS.PRIMARY } }}
       />
 
@@ -142,7 +163,7 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
         value={date.toISOString().split('T')[0]}
         mode="outlined"
         onFocus={() => setShowDatePicker(true)}
-        style={{ marginBottom: 16, width: '75%' }}
+        className="mb-4 w-3/4"
         theme={{ colors: { primary: COLORS.PRIMARY } }}
       />
 
@@ -156,27 +177,46 @@ const AddEditExpenseScreen = ({ route, navigation }) => {
         />
       )}
 
-      <Button
-        mode="contained"
-        onPress={handleSaveExpense}
-        style={{ backgroundColor: COLORS.PRIMARY, width: '75%', paddingVertical: 8 }}
-      >
-        {expenseId ? 'Update Expense' : 'Add Expense'}
-      </Button>
-
-      <Button
-        mode="contained"
-        onPress={handleConvertCurrency}
-        style={{ backgroundColor: '#22C55E', width: '75%', paddingVertical: 8, marginTop: 16 }}
-      >
-        Convert Currency
-      </Button>
+      <DropDownPicker
+        open={currencyOpen}
+        value={targetCurrency}
+        items={[
+          { label: 'EUR', value: 'EUR' },
+          { label: 'GBP', value: 'GBP' },
+          { label: 'JPY', value: 'JPY' },
+          { label: 'AUD', value: 'AUD' },
+          { label: 'IDR', value: 'IDR' },
+        ]}
+        setOpen={setCurrencyOpen}
+        setValue={setTargetCurrency}
+        placeholder="Select target currency"
+        className="mb-4 border"
+        containerStyle={{ width: '75%' }}
+        dropDownContainerStyle={{ backgroundColor: COLORS.BACKGROUND }}
+        onClose={() => setCurrencyOpen(false)} // Close on clicking outside
+      />
 
       {convertedAmount !== null && (
         <Text className="text-lg text-gray-600 mb-4">
           Converted Amount: {targetCurrency} {convertedAmount.toFixed(2)}
         </Text>
       )}
+      
+      <Button
+        mode="contained"
+        onPress={handleConvertCurrency}
+        className="bg-green-500 mb-4 w-3/4"
+      >
+        Convert to {targetCurrency}
+      </Button>
+
+      <Button
+        mode="contained"
+        onPress={handleSaveExpense}
+        className="bg-[#1E3A8A] w-3/4"
+      >
+        {expenseId ? 'Update Expense' : 'Add Expense'}
+      </Button>
     </Container>
   );
 };

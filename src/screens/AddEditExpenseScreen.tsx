@@ -25,7 +25,6 @@ type AddEditExpenseScreenProps = {
 
 const AddEditExpenseScreen: React.FC<AddEditExpenseScreenProps> = ({ route, navigation }) => {
   const { expenseId } = route.params || {};
-
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
@@ -94,8 +93,7 @@ const AddEditExpenseScreen: React.FC<AddEditExpenseScreenProps> = ({ route, navi
         Alert.alert('Success', 'Expense added successfully!');
       }
 
-      navigation.navigate('ManageExpenses', { isRefresh: true });
-      resetState(); // Reset fields after saving
+      resetState();
     } catch (error) {
       Alert.alert('Error', 'Failed to save expense. Please try again.');
     }

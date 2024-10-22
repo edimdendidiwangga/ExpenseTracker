@@ -9,6 +9,13 @@ interface User {
   role: string;
 }
 
+interface Expense {
+  id: number;
+  category: string;
+  amount: number;
+  date: string;
+}
+
 interface ResultSet {
   rows: {
     length: number;
@@ -26,6 +33,7 @@ interface Transaction {
   ) => void;
 }
 
+// Create user table and seed
 export const createUserTableAndSeed = (): void => {
   db.transaction((tx: Transaction) => {
     tx.executeSql(
@@ -57,13 +65,17 @@ export const createUserTableAndSeed = (): void => {
   });
 };
 
-export const insertUser = (email: string, password: string, role: string): void => {
+export const createExpensesTable = (): void => {
   db.transaction((tx: Transaction) => {
     tx.executeSql(
-      'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
-      [email, password, role],
-      () => console.log('User added successfully'),
-      (error) => console.error('Error adding user', error)
+      'CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, category TEXT, amount REAL, date TEXT)',
+      [],
+      () => {
+        console.log('Expenses table created successfully');
+      },
+      (error) => {
+        console.error('Error creating expenses table', error);
+      }
     );
   });
 };
@@ -87,6 +99,7 @@ export const loginUser = (email: string, password: string): Promise<User> => {
   });
 };
 
+
 export const insertExpense = (category: string, amount: number, date: string): void => {
   db.transaction((tx: Transaction) => {
     tx.executeSql(
@@ -98,19 +111,84 @@ export const insertExpense = (category: string, amount: number, date: string): v
   });
 };
 
-export const getExpenses = (): Promise<any[]> => {
+export const getExpenses = (): Promise<Expense[]> => {
   return new Promise((resolve, reject) => {
     db.transaction((tx: Transaction) => {
       tx.executeSql(
         'SELECT * FROM expenses ORDER BY date DESC',
         [],
-        (_, results) => resolve(results.rows.raw()),
+        (_, results) => resolve(results.rows.raw() as Expense[]),
         (error) => reject(error)
       );
     });
   });
 };
 
+export const getAllUserExpenses = async (): Promise<Expense[]> => {
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        'SELECT * FROM expenses',
+        [],
+        (_, results) => {
+          const expenses: Expense[] = [];
+          for (let i = 0; i < results.rows.length; i++) {
+            expenses.push(results.rows.item(i));
+          }
+          resolve(expenses);
+        },
+        (error) => reject(error)
+      );
+    });
+  });
+};
+
+
+// Get expense by ID
+export const getExpenseById = (id: number): Promise<Expense | null> => {
+  return new Promise((resolve, reject) => {
+    db.transaction((tx: Transaction) => {
+      tx.executeSql(
+        'SELECT * FROM expenses WHERE id = ?',
+        [id],
+        (_, results) => {
+          if (results.rows.length > 0) {
+            resolve(results.rows.item(0) as Expense);
+          } else {
+            resolve(null); // Return null if no expense found
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  });
+};
+
+// Edit expense
+export const updateExpense = (id: number, category: string, amount: number, date: string): void => {
+  db.transaction((tx: Transaction) => {
+    tx.executeSql(
+      'UPDATE expenses SET category = ?, amount = ?, date = ? WHERE id = ?',
+      [category, amount, date, id],
+      () => console.log('Expense updated successfully'),
+      (error) => console.error('Error updating expense', error)
+    );
+  });
+};
+
+// Delete expense
+export const deleteExpense = (id: number): void => {
+  db.transaction((tx: Transaction) => {
+    tx.executeSql(
+      'DELETE FROM expenses WHERE id = ?',
+      [id],
+      () => console.log('Expense deleted successfully'),
+      (error) => console.error('Error deleting expense', error)
+    );
+  });
+};
+
+// Get total spending by date range
 export const getTotalSpendingByRange = (startDate: string, endDate: string): Promise<number> => {
   return new Promise((resolve, reject) => {
     db.transaction((tx: Transaction) => {
@@ -127,6 +205,7 @@ export const getTotalSpendingByRange = (startDate: string, endDate: string): Pro
   });
 };
 
+// Get total spending per day
 export const getTotalSpendingPerDay = (date: string): Promise<number> => {
   return new Promise((resolve, reject) => {
     db.transaction((tx: Transaction) => {
@@ -143,6 +222,7 @@ export const getTotalSpendingPerDay = (date: string): Promise<number> => {
   });
 };
 
+// Get total spending per year
 export const getTotalSpendingPerYear = (year: string): Promise<number> => {
   return new Promise((resolve, reject) => {
     db.transaction((tx: Transaction) => {
@@ -159,6 +239,7 @@ export const getTotalSpendingPerYear = (year: string): Promise<number> => {
   });
 };
 
+// Get category breakdown
 export const getCategoryBreakdown = (selectedCategory: string): Promise<any[]> => {
   return new Promise((resolve, reject) => {
     db.transaction((tx: Transaction) => {
@@ -182,13 +263,14 @@ export const getCategoryBreakdown = (selectedCategory: string): Promise<any[]> =
   });
 };
 
-export const getLatestExpenses = (limit: number = 5): Promise<any[]> => {
+// Get latest expenses with a limit
+export const getLatestExpenses = (limit: number = 5): Promise<Expense[]> => {
   return new Promise((resolve, reject) => {
     db.transaction((tx: Transaction) => {
       tx.executeSql(
         'SELECT * FROM expenses ORDER BY date DESC LIMIT ?',
         [limit],
-        (_, results) => resolve(results.rows.raw()),
+        (_, results) => resolve(results.rows.raw() as Expense[]),
         (error) => reject(error)
       );
     });

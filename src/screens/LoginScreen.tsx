@@ -6,10 +6,12 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface User {
   email: string;
+  role: string;
+  userId: string;
 }
 
 interface AuthContextType {
-  signIn: (token: string) => void;
+  signIn: (token: string, role: string) => void;
 }
 
 const LoginScreen: React.FC = () => {
@@ -19,9 +21,11 @@ const LoginScreen: React.FC = () => {
 
   const handleLogin = async () => {
     try {
-      const user = await loginUser(email, password) as User;
+      const user = await loginUser(email, password);
       Alert.alert('Login Successful', `Welcome, ${user.email}!`);
-      signIn('dummy-auth-token');
+
+      signIn('dummy-auth-token', user.role);
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       Alert.alert('Login Failed', errorMessage);

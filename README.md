@@ -46,6 +46,20 @@ Ensure you have the following installed:
    npm start
    ```
 
+## Login Instructions
+
+To access the application, use the following credentials:
+
+### User Account
+- **Email:** user@example.com
+- **Password:** user123
+- **Role:** User
+
+### Admin Account
+- **Email:** admin@example.com
+- **Password:** admin123
+- **Role:** Admin
+
 ## Software Architecture and Design Patterns
 
 This application follows a component-based architecture using React and React Native. The main design patterns used are:

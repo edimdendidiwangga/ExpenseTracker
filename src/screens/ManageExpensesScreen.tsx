@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Alert, FlatList, RefreshControl } from 'react-native';
 import { Text, Card, Divider } from 'react-native-paper';
 import { styled } from 'nativewind';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { getExpenses, deleteExpense } from '../utils/db';
 import ExpenseIcons from '../components/ExpenseIcons';
 
@@ -30,11 +30,17 @@ const ManageExpensesScreen: React.FC = () => {
     }
   }, [route.params]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchExpenses();
+    }, [])
+  );
+
   const fetchExpenses = async () => {
     const fetchedExpenses = await getExpenses();
     setExpenses(fetchedExpenses);
   };
-
+  
   const handleDeleteExpense = (id: number) => {
     Alert.alert(
       'Delete Expense',

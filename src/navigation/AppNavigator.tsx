@@ -62,7 +62,7 @@ const TabNavigator: React.FC = () => {
           ),
         }}
       />
-      {userRole === 'admin' && (
+      {userRole === 'Admin' && (
         <Tab.Screen
           name="AllUsersExpenses"
           component={AllUsersExpensesScreen}
